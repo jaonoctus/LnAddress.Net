@@ -1,6 +1,6 @@
 services:
   lnaddress.net:
-    image: ipmsio/lnaddress.net:latest
+    image: ngoline/lnaddress.net:latest
     ports:
       - "65535:80"
     networks:

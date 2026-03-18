@@ -18,7 +18,7 @@ public class HealthController(ILightningService lightningService): ControllerBas
                 ? Ok(new { ok = true })
                 : StatusCode(StatusCodes.Status503ServiceUnavailable, new { ok = false });
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, new { ok = false });
         }

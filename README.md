@@ -6,7 +6,7 @@ example: `username@your.domain`.
 ## Overview
 
 - **Docker Image**: A pre-built Docker image is available
-  at [ipmsio/lnaddress.net](https://hub.docker.com/r/ipmsio/lnaddress.net).
+  at [ngoline/lnaddress.net](https://hub.docker.com/r/ngoline/lnaddress.net).
 - **Configuration Reference**: Review the [docker-compose.yml](docker-compose.yml) file for a complete list of
   environment variables and configuration options.
 - **Reverse Proxy Setup**: An example Nginx configuration is provided in [example.nginx](example.nginx).
@@ -16,7 +16,7 @@ example: `username@your.domain`.
 1. **Pull the Docker Image**:
 
    ```bash
-   docker pull ipmsio/lnaddress.net:latest
+   docker pull ngoline/lnaddress.net:latest
    ```
 
 2. **Review Configuration Variables**:
@@ -99,7 +99,7 @@ docker run -d \
   -e LND__CERT="<base64_tls_cert>" \
   -e LND__MACAROON="<base64_admin_macaroon>" \
   -e LND__RPCADDRESS="https://<lnd-ip>:10009" \
-  ipmsio/lnaddress.net:latest
+  ngoline/lnaddress.net:latest
 ```
 
 Replace the environment variables with your actual values.
