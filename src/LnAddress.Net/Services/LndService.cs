@@ -1,10 +1,10 @@
 using System.Security.Cryptography.X509Certificates;
 using Grpc.Core;
 using Grpc.Net.Client;
-using Lnrpc;
 
 namespace LnAddress.Net.Services;
 
+using Lnrpc;
 using Interfaces;
 
 public class LndService : ILightningService
@@ -23,7 +23,11 @@ public class LndService : ILightningService
 
         var rawCert = Convert.FromBase64String(configuration["Lnd:Cert"]
                                                ?? throw new Exception("Lnd certificate config is missing"));
-        var x509Cert = new X509Certificate2(rawCert);
+#if NET9_0_OR_GREATER
+        var x509Cert = X509CertificateLoader.LoadCertificate(rawCert);
+#else
+        var x509Cert = new X509Certificate(rawCert);
+#endif
         var httpClientHandler = new HttpClientHandler
         {
             // Validating a self-signed cert won't work. Therefore, validate the certificate directly

@@ -1,10 +1,12 @@
+using Grpc.Core;
+using Lnrpc;
 using LNUnit.LND;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using NLightning.Common.Managers;
-using Invoice = NLightning.Bolts.BOLT11.Invoice;
-using Network = NLightning.Common.Types.Network;
+using NLightning.Domain.Protocol.ValueObjects;
+using Routerrpc;
+using Invoice = NLightning.Bolt11.Models.Invoice;
 
 namespace LnAddress.Net.Tests.IntegrationTests;
 
@@ -24,14 +26,11 @@ public class LndGrpcIntegrationTest
 
         var loggerMock = new Mock<ILogger<LndService>>();
 
-        // Configure NLightning.Bolt11 decoder
-        ConfigManager.Instance.Network = Network.REG_TEST;
-
         _alice = _lightningRegtestFixture.Builder?.LNDNodePool?.ReadyNodes.First(x => x.LocalAlias == "alice") ?? throw new Exception("Alice was not ready.");
 
         var inMemorySettings = new Dictionary<string, string?>{
             { "Lnd:Macaroon", _alice.Settings.MacaroonBase64 },
-            { "Lnd:Cert", _alice.Settings.TLSCertBase64 },
+            { "Lnd:Cert", _alice.Settings.TlsCertBase64 },
             { "Lnd:RpcAddress", _alice.Host }
         };
 
@@ -54,10 +53,10 @@ public class LndGrpcIntegrationTest
         var invoice = await _lndService.FetchInvoiceAsync(expectedAmount, "nGoline", null);
 
         // Assert
-        var decodedInvoice = Invoice.Decode(invoice);
+        var decodedInvoice = Invoice.Decode(invoice, BitcoinNetwork.Regtest);
         Assert.NotNull(decodedInvoice);
         Assert.Equal(expectedPubkey, decodedInvoice.PayeePubKey?.ToBytes());
-        Assert.Equal(expectedAmount, (long)decodedInvoice.AmountMilliSats);
+        Assert.Equal(expectedAmount, (long)decodedInvoice.Amount.MilliSatoshi);
         Assert.Equal(expectedDescription, decodedInvoice.Description);
     }
 
@@ -73,10 +72,10 @@ public class LndGrpcIntegrationTest
         var invoice = await _lndService.FetchInvoiceAsync(expectedAmount, "nGoline", expectedDescription);
 
         // Assert
-        var decodedInvoice = Invoice.Decode(invoice);
+        var decodedInvoice = Invoice.Decode(invoice, BitcoinNetwork.Regtest);
         Assert.NotNull(decodedInvoice);
         Assert.Equal(expectedPubkey, decodedInvoice.PayeePubKey?.ToBytes());
-        Assert.Equal(expectedAmount, (long)decodedInvoice.AmountMilliSats);
+        Assert.Equal(expectedAmount, (long)decodedInvoice.Amount.MilliSatoshi);
         Assert.Equal(expectedDescription, decodedInvoice.Description);
     }
 
@@ -87,17 +86,21 @@ public class LndGrpcIntegrationTest
         var invoice = await _lndService.FetchInvoiceAsync(10_000, "nGoline", null);
         var carol = _lightningRegtestFixture.Builder?.LNDNodePool?.ReadyNodes.First(x => x.LocalAlias == "carol") ?? throw new Exception("Bob was not ready.");
         // Wait for a second so channels are synced
-        await Task.Delay(1_000);
+        await Task.Delay(1_000, TestContext.Current.CancellationToken);
 
         // Act
-        var paymentResponse = await carol.LightningClient.SendPaymentSyncAsync(new()
+        var streamingCallResponse = carol.RouterClient.SendPaymentV2(new SendPaymentRequest
         {
             PaymentRequest = invoice,
-        });
-
+        }, cancellationToken: TestContext.Current.CancellationToken);
+        var paymentResponse = await streamingCallResponse
+                                   .ResponseStream
+                                   .ReadAllAsync(TestContext.Current.CancellationToken)
+                                   .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
+        
         // Assert
         Assert.NotNull(paymentResponse);
-        Assert.Empty(paymentResponse.PaymentError);
+        Assert.Equal(PaymentFailureReason.FailureReasonNone, paymentResponse.FailureReason);
         Assert.NotNull(paymentResponse.PaymentPreimage);
     }
 }
