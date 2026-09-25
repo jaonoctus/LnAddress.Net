@@ -22,6 +22,8 @@
 
     <ItemGroup>
         <Protobuf Include="Grpc\lightning.proto" GrpcServices="Client" />
+        <Protobuf Include="Grpc\cln\node.proto" ProtoRoot="Grpc\cln" GrpcServices="Client" />
+        <Protobuf Include="Grpc\cln\primitives.proto" ProtoRoot="Grpc\cln" GrpcServices="None" />
     </ItemGroup>
 
     <ItemGroup>
