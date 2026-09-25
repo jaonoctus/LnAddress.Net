@@ -23,7 +23,8 @@ example: `username@your.domain`.
 
    Check the [docker-compose.yml](docker-compose.yml) file for environment variables. These variables allow you to:
 
-    - Configure connection details to your LND instance.
+    - Choose the Lightning backend (`LIGHTNING__BACKEND`): `lnd` (default) or `cln` (Core Lightning).
+    - Configure connection details to your LND or Core Lightning instance.
     - Adjust limits for payment amounts or comment fields.
 
 3. **Set Up Nginx (Optional)**:
@@ -32,7 +33,8 @@ example: `username@your.domain`.
 
 ## Connecting to LND
 
-To enable Lightning payments, you need to connect LnAddress.Net to your LND instance. You will need:
+This is the default backend (`LIGHTNING__BACKEND=lnd`). To enable Lightning payments, you need to connect
+LnAddress.Net to your LND instance. You will need:
 
 - The **TLS certificate** (`tls.cert`)
 - The **admin.macaroon** in base64 format
@@ -73,6 +75,66 @@ To enable Lightning payments, you need to connect LnAddress.Net to your LND inst
    ```
 
    This makes LND’s RPC interface accessible to LnAddress.Net.
+
+## Connecting to Core Lightning (CLN)
+
+Set `LIGHTNING__BACKEND=cln` to use Core Lightning instead of LND. LnAddress.Net talks to the
+[cln-grpc](https://github.com/ElementsProject/lightning/tree/master/plugins/grpc-plugin) plugin, which authenticates
+clients with mutual TLS. You will need:
+
+- The **CA certificate** (`ca.pem`)
+- A **client certificate and key** signed by that CA (`client.pem` and `client-key.pem`)
+- The **cln-grpc endpoint**
+
+**Steps to Obtain CLN Credentials**:
+
+1. **Enable the gRPC plugin**:
+
+   Add the following to your CLN config (or pass them as command line flags) and restart `lightningd`:
+
+   ```ini
+   grpc-port=9736
+   grpc-host=0.0.0.0
+   ```
+
+   Leave `grpc-host` unset if LnAddress.Net runs on the same host as CLN (the plugin listens on localhost by
+   default). On first start the plugin generates `ca.pem`, `client.pem` and `client-key.pem` in the network
+   directory, for example `~/.lightning/bitcoin/`.
+
+2. **Certificates**:
+
+   Convert each PEM file to a single-line base64 string:
+
+   ```bash
+   base64 ~/.lightning/bitcoin/ca.pem | tr -d '\n'
+   base64 ~/.lightning/bitcoin/client.pem | tr -d '\n'
+   base64 ~/.lightning/bitcoin/client-key.pem | tr -d '\n'
+   ```
+
+   Raw PEM text (including the `-----BEGIN ...-----` lines) is accepted as well.
+
+3. **RPC Server URL**:
+
+   Set your cln-grpc endpoint, for example:
+
+   ```bash
+   https://<cln-ip>:9736
+   ```
+
+   The server certificate is validated against `ca.pem`, so the hostname does not need to match the certificate.
+
+**Environment variables**:
+
+```bash
+docker run -d \
+  -p 80:80 \
+  -e LIGHTNING__BACKEND=cln \
+  -e CLN__RPCADDRESS="https://<cln-ip>:9736" \
+  -e CLN__CACERT="<base64_ca_pem>" \
+  -e CLN__CLIENTCERT="<base64_client_pem>" \
+  -e CLN__CLIENTKEY="<base64_client_key_pem>" \
+  ngoline/lnaddress.net:latest
+```
 
 ## Default Settings
 
