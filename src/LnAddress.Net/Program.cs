@@ -19,7 +19,19 @@ builder.Services.Configure<RouteOptions>(options =>
     options.LowercaseUrls = true;
 });
 
-builder.Services.AddSingleton<ILightningService, LndService>();
+// Select the Lightning backend. Defaults to LND for backwards compatibility.
+var lightningBackend = builder.Configuration["Lightning:Backend"] ?? "lnd";
+switch (lightningBackend.Trim().ToLowerInvariant())
+{
+    case "lnd":
+        builder.Services.AddSingleton<ILightningService, LndService>();
+        break;
+    case "cln":
+        builder.Services.AddSingleton<ILightningService, ClnService>();
+        break;
+    default:
+        throw new Exception($"Unknown Lightning:Backend '{lightningBackend}'. Supported values: lnd, cln");
+}
 
 builder.Services.AddCors(options =>
 {

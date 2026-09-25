@@ -8,9 +8,17 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_ENVIRONMENT=Production
+      # Lightning backend: lnd (default) or cln
+      - LIGHTNING__BACKEND=lnd
+      # LND settings (when LIGHTNING__BACKEND=lnd)
       - LND__MACAROON=BASE64
       - LND__CERT=BASE64
       - LND__RPCADDRESS=https://your.lnd.address:10009
+      # Core Lightning settings (when LIGHTNING__BACKEND=cln)
+      # - CLN__RPCADDRESS=https://your.cln.address:9736
+      # - CLN__CACERT=BASE64_OF_ca.pem
+      # - CLN__CLIENTCERT=BASE64_OF_client.pem
+      # - CLN__CLIENTKEY=BASE64_OF_client-key.pem
       - INVOICE__MINSENDABLE=10000
       - INVOICE__MAXSENDABLE=100000000
       - INVOICE__MAXCOMMENTALLOWED=255
