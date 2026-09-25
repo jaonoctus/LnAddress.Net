@@ -1,0 +1,43 @@
+# Regtest bitcoind + Core Lightning node with the cln-grpc plugin enabled.
+# Used by the ClnGrpcIntegrationTest fixture.
+services:
+  bitcoind:
+    image: polarlightning/bitcoind:29.0
+    container_name: lnaddress-cln-bitcoind
+    command:
+      - bitcoind
+      - -regtest
+      - -server
+      - -txindex
+      - -rpcbind=0.0.0.0
+      - -rpcallowip=0.0.0.0/0
+      - -rpcuser=lnaddress
+      - -rpcpassword=lnaddress
+      - -fallbackfee=0.0002
+      - -zmqpubrawblock=tcp://0.0.0.0:28334
+      - -zmqpubrawtx=tcp://0.0.0.0:28335
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=lnaddress", "-rpcpassword=lnaddress", "getblockchaininfo"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  cln:
+    image: elementsproject/lightningd:v26.06.8
+    container_name: lnaddress-cln-node
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+    environment:
+      - LIGHTNINGD_NETWORK=regtest
+    command:
+      - --bitcoin-rpcconnect=bitcoind
+      - --bitcoin-rpcport=18443
+      - --bitcoin-rpcuser=lnaddress
+      - --bitcoin-rpcpassword=lnaddress
+      - --alias=lnaddress-cln
+      - --grpc-host=0.0.0.0
+      - --grpc-port=9736
+      - --log-level=info
+    ports:
+      - "127.0.0.1:19736:9736"
